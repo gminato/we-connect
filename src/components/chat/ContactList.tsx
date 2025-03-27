@@ -2,6 +2,7 @@ import { Contact } from '@/lib/types';
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '../ui/input';
+import {cn} from "@/lib/utils";
 
 const mockContacts: Contact[] = [
   {
@@ -82,8 +83,10 @@ export function ContactList({
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredContacts = [...contacts,...contacts,...contacts].filter((contact: Contact) => {
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return contact.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  console.log(filteredContacts)
 
   const sortedContacts = filteredContacts.sort((a, b) => {
     if (a.unreadCount != b.unreadCount) {
@@ -96,19 +99,102 @@ export function ContactList({
     return timeB - timeA;
   });
 
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) {
+      return diffDays === 1 ? "Yesterday" : `${diffDays} days ago`;
+    }
+    
+    if (diffHours > 0) {
+      return `${diffHours}h ago`;
+    }
+    
+    if (diffMinutes > 0) {
+      return `${diffMinutes}m ago`;
+    }
+    
+    return "Just now";
+  }
+
   return (
-    <div className="h-full flex flex-col rounded-xl overflow-hidden bg-card">
-      <div className="p-4 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            className="pl-9 bg-muted/50"
-            placeholder="Search contacts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+    <div className="h-full flex flex-col border rounded-xl overflow-hidden bg-card">
+    <div className="p-4 border-b">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <Input
+          className="pl-9 bg-muted/50"
+          placeholder="Search contacts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
     </div>
+    
+    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-5rem)]">
+      {sortedContacts.length === 0 ? (
+        <div className="flex items-center justify-center h-full p-4 text-center text-muted-foreground">
+          No contacts found
+        </div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {sortedContacts.map((contact) => (
+            <li key={contact.id}>
+              <button
+                className={cn(
+                  "w-full flex items-center p-4 transition-colors hover:bg-muted/50",
+                  selectedContactId === contact.id && "bg-muted"
+                )}
+                onClick={() => onSelectContact(contact)}
+              >
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={contact.avatar}
+                    alt={contact.name}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                  {contact.status === "online" && (
+                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background animate-ping-slow" />
+                  )}
+                  {contact.status === "away" && (
+                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-yellow-500 ring-2 ring-background" />
+                  )}
+                </div>
+                
+                <div className="ml-4 flex-1 text-left">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">{contact.name}</h3>
+                    <span className="text-xs text-muted-foreground">
+                      {contact.lastMessage?.timestamp ? (
+                        getTimeAgo(contact.lastMessage.timestamp)
+                      ) : contact.lastSeen ? (
+                        `Seen ${getTimeAgo(contact.lastSeen)}`
+                      ) : null}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-sm truncate text-muted-foreground max-w-[180px]">
+                      {contact.lastMessage?.content || "No messages yet"}
+                    </p>
+                    {contact.unreadCount > 0 && (
+                      <span className="flex-shrink-0 h-5 w-5 rounded-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground font-semibold">
+                        {contact.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
   );
 }
