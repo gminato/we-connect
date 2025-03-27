@@ -6,3 +6,11 @@ export interface User {
   status: 'online' | 'offline' | 'away';
   lastSeen?: Date;
 }
+
+export interface Contact extends User {
+  unreadCount: number;
+  lastMessage?: {
+    content: string;
+    timestamp: Date;
+  };
+}
